@@ -268,8 +268,20 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btn-alertas").addEventListener("click", () => cargarAlertas().catch((e) => alert(e.message)));
   $("#btn-kpis").addEventListener("click", () => cargarKpis().catch((e) => alert(e.message)));
   $("#btn-cierre").addEventListener("click", async () => {
-    await fetch("/local/reportes/tareas/cierre-diario", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fecha: $("#k-fecha").value }) });
-    cargarKpis();
+    const b = $("#btn-cierre");
+    b.disabled = true;
+    b.textContent = "Ejecutando cierre…";
+    try {
+      const r = await fetch("/local/reportes/tareas/cierre-diario", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fecha: $("#k-fecha").value }) });
+      const c = await r.json();
+      $("#msg-cierre").textContent = `Cierre ejecutado: ${c.jornadas_pagables} jornadas enviadas a nómina, ${c.jornadas_pendientes} pendientes por decidir.`;
+      await cargarKpis();
+    } catch (e) {
+      $("#msg-cierre").textContent = `No se pudo ejecutar el cierre: ${e.message}`;
+    } finally {
+      b.disabled = false;
+      b.textContent = "Ejecutar cierre diario (demo local)";
+    }
   });
   $("#tabla-jornadas").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-d]");
