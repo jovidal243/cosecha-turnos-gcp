@@ -1,0 +1,45 @@
+flowchart TB
+  subgraph Campo["Frentes de cosecha"]
+    SUP["Supervisor<br/>PWA offline-first<br/>(QR + GPS + IndexedDB)"]
+  end
+  subgraph Oficina["Gerencia de Cosecha"]
+    JEFE["Jefe de frente /<br/>analista"]
+    PBI["Power BI /<br/>Looker Studio"]
+  end
+  subgraph GCP["Google Cloud · us-central1"]
+    direction LR
+    ASI["Cloud Run<br/>ms-asistencia<br/>(API + PWA, público)"]
+    SM[("Secret Manager<br/>tokens por rol")]
+    PS{{"Pub/Sub<br/>marcaciones<br/>(orden por trabajador)"}}
+    DLQ{{"Pub/Sub<br/>marcaciones-dlq"}}
+    VAL["Cloud Run<br/>ms-validacion<br/>(reglas + Isolation Forest,<br/>privado)"]
+    ALE{{"Pub/Sub<br/>alertas"}}
+    FS[("Firestore<br/>trabajadores · frentes · turnos<br/>marcaciones · jornadas<br/>alertas · auditoría")]
+    BQ[("BigQuery<br/>jornadas_validadas<br/>decisiones · cierres")]
+    GCS[("Cloud Storage<br/>nómina CSV · resúmenes<br/>modelo .joblib")]
+    GEM["Vertex AI<br/>Gemini 3.8 Flash<br/>(IA generativa)"]
+    SCH["Cloud Scheduler<br/>05:30 diario"]
+    REP["Cloud Run<br/>ms-reportes<br/>(privado)"]
+  end
+  NOM["ERP / Nómina"]
+
+  SUP -- "HTTPS REST + token" --> ASI
+  JEFE -- "HTTPS REST + token" --> ASI
+  SM -. "API_TOKENS" .-> ASI
+  ASI --> FS
+  ASI -- "AsistenciaRegistrada" --> PS
+  PS -- "push OIDC" --> VAL
+  PS -. "5 intentos fallidos" .-> DLQ
+  VAL --> FS
+  VAL -- "explicación" --> GEM
+  VAL --> BQ
+  VAL -- "AlertaGenerada" --> ALE
+  GCS -. "modelo" .-> VAL
+  ASI -- "asistente" --> GEM
+  SCH -- "OIDC" --> REP
+  REP --> FS
+  REP -- "resumen" --> GEM
+  REP --> GCS
+  REP --> BQ
+  GCS -- "horas validadas" --> NOM
+  BQ --> PBI

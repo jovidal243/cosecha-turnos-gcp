@@ -1,0 +1,78 @@
+# CI/CD en Cloud Build: pruebas -> imágenes -> Artifact Registry -> Cloud Run.
+# Manual:   bash infra/02_desplegar.sh
+# Automático: disparador de Cloud Build conectado al repositorio de GitHub (rama main).
+substitutions:
+  _REGION: us-central1
+  _AR_REPO: cosecha
+  _BUCKET: ""
+  _BQ_DATASET: cosecha_turnos
+  _GEMINI_MODEL: gemini-3.8-flash
+  _GEMINI_LOCATION: global
+  _MODEL_URI: ""
+  _TAG: manual
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamicSubstitutions: true
+
+steps:
+  - id: pruebas
+    name: python:3.12-slim
+    entrypoint: sh
+    args: ["-c", "pip install -q -r requirements-dev.txt && python -m pytest -q"]
+
+  - id: build-asistencia
+    name: gcr.io/cloud-builders/docker
+    waitFor: [pruebas]
+    args: ["build", "--build-arg", "SERVICIO=ms_asistencia",
+           "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/ms-asistencia:${_TAG}", "."]
+  - id: build-validacion
+    name: gcr.io/cloud-builders/docker
+    waitFor: [pruebas]
+    args: ["build", "--build-arg", "SERVICIO=ms_validacion",
+           "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/ms-validacion:${_TAG}", "."]
+  - id: build-reportes
+    name: gcr.io/cloud-builders/docker
+    waitFor: [pruebas]
+    args: ["build", "--build-arg", "SERVICIO=ms_reportes",
+           "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/ms-reportes:${_TAG}", "."]
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    waitFor: [build-asistencia, build-validacion, build-reportes]
+    entrypoint: bash
+    args: ["-c", "for s in ms-asistencia ms-validacion ms-reportes; do docker push ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/$$s:${_TAG}; done"]
+
+  - id: deploy-validacion
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    waitFor: [push]
+    entrypoint: gcloud
+    args: ["run", "deploy", "ms-validacion", "--quiet",
+           "--image", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/ms-validacion:${_TAG}",
+           "--region", "${_REGION}", "--no-allow-unauthenticated",
+           "--service-account", "sa-validacion@$PROJECT_ID.iam.gserviceaccount.com",
+           "--memory", "1Gi", "--cpu", "1", "--min-instances", "0", "--max-instances", "3", "--concurrency", "10",
+           "--set-env-vars", "MODO=gcp,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,BQ_DATASET=${_BQ_DATASET},GEMINI_MODEL=${_GEMINI_MODEL},GEMINI_LOCATION=${_GEMINI_LOCATION},MODEL_URI=${_MODEL_URI}"]
+
+  - id: deploy-reportes
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    waitFor: [push]
+    entrypoint: gcloud
+    args: ["run", "deploy", "ms-reportes", "--quiet",
+           "--image", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/ms-reportes:${_TAG}",
+           "--region", "${_REGION}", "--no-allow-unauthenticated",
+           "--service-account", "sa-reportes@$PROJECT_ID.iam.gserviceaccount.com",
+           "--memory", "512Mi", "--min-instances", "0", "--max-instances", "1", "--timeout", "300",
+           "--set-env-vars", "MODO=gcp,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,BUCKET=${_BUCKET},BQ_DATASET=${_BQ_DATASET},GEMINI_MODEL=${_GEMINI_MODEL},GEMINI_LOCATION=${_GEMINI_LOCATION}"]
+
+  - id: deploy-asistencia
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    waitFor: [push]
+    entrypoint: gcloud
+    args: ["run", "deploy", "ms-asistencia", "--quiet",
+           "--image", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/ms-asistencia:${_TAG}",
+           "--region", "${_REGION}", "--allow-unauthenticated",
+           "--service-account", "sa-asistencia@$PROJECT_ID.iam.gserviceaccount.com",
+           "--memory", "512Mi", "--min-instances", "0", "--max-instances", "3", "--concurrency", "40",
+           "--set-secrets", "API_TOKENS=api-tokens:latest",
+           "--set-env-vars", "MODO=gcp,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,BQ_DATASET=${_BQ_DATASET},GEMINI_MODEL=${_GEMINI_MODEL},GEMINI_LOCATION=${_GEMINI_LOCATION}"]

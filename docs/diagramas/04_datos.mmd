@@ -1,0 +1,16 @@
+erDiagram
+  direction LR
+  FRENTES ||--o{ TRABAJADORES : asigna
+  FRENTES ||--o{ TURNOS : programa
+  TURNOS }o--o{ TRABAJADORES : "trabajadores[]"
+  TRABAJADORES ||--o{ MARCACIONES : registra
+  MARCACIONES }o--|| JORNADAS : "entrada / salida"
+  JORNADAS ||--o{ ALERTAS : genera
+  JORNADAS ||--o{ AUDITORIA : traza
+  FRENTES { string id PK  string nombre  float lat  float lon  int radio_m }
+  TRABAJADORES { string codigo PK  string cargo  string frente_id  string qr }
+  TURNOS { string id PK  date fecha  string frente_id  string inicio  string fin  float horas_programadas  map extras_autorizadas }
+  MARCACIONES { uuid id PK  string codigo_trabajador  string tipo  timestamp ts  float lat  float lon  string estado }
+  JORNADAS { uuid id PK  date fecha  timestamp entrada_ts  timestamp salida_ts  float horas_trabajadas  float horas_extra  string estado  array hallazgos  float score_anomalia  string explicacion_ia }
+  ALERTAS { uuid id PK  string tipo  string referencia_id  array reglas  string explicacion_ia  bool atendida }
+  AUDITORIA { uuid id PK  string accion  string entidad_id  string actor  timestamp ts }

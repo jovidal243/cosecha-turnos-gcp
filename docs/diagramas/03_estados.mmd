@@ -1,0 +1,15 @@
+stateDiagram-v2
+  [*] --> recibida: marcación sincronizada
+  recibida --> rechazada: traslape · salida sin entrada · trabajador desconocido
+  recibida --> abierta: entrada válida
+  abierta --> valido: salida sin hallazgos
+  abierta --> observado: reglas u Isolation Forest con hallazgos
+  abierta --> rechazado: duración inválida
+  observado --> aprobado: jefe de frente aprueba
+  observado --> rechazado: jefe de frente rechaza
+  valido --> nomina: cierre diario
+  aprobado --> nomina: cierre diario
+  nomina: Enviada a nómina (CSV en Cloud Storage)
+  rechazada --> [*]
+  rechazado --> [*]
+  nomina --> [*]

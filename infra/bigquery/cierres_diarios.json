@@ -1,0 +1,11 @@
+[
+  {"name": "fecha", "type": "DATE", "mode": "REQUIRED"},
+  {"name": "generado_en", "type": "TIMESTAMP"},
+  {"name": "jornadas_total", "type": "INTEGER"},
+  {"name": "jornadas_pagables", "type": "INTEGER"},
+  {"name": "jornadas_pendientes", "type": "INTEGER"},
+  {"name": "horas_trabajadas", "type": "FLOAT"},
+  {"name": "horas_extra", "type": "FLOAT"},
+  {"name": "tasa_observacion", "type": "FLOAT"},
+  {"name": "origen_resumen", "type": "STRING"}
+]

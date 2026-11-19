@@ -1,0 +1,14 @@
+flowchart LR
+  DEV["Desarrollador"] -- "git push" --> GH["GitHub<br/>repositorio"]
+  GH -- "Actions: ruff + pytest + docker build" --> CI["CI"]
+  GH -- "disparador (rama main)" --> CB["Cloud Build<br/>sa-cloudbuild"]
+  CB -- "pytest" --> CB
+  CB -- "docker build x3" --> AR[("Artifact Registry")]
+  AR --> R1["Cloud Run<br/>ms-asistencia<br/>sa-asistencia"]
+  AR --> R2["Cloud Run<br/>ms-validacion<br/>sa-validacion"]
+  AR --> R3["Cloud Run<br/>ms-reportes<br/>sa-reportes"]
+  INV["sa-invocador<br/>(OIDC)"] -. "run.invoker" .-> R2
+  INV -. "run.invoker" .-> R3
+  MON["Cloud Logging<br/>Cloud Monitoring<br/>Presupuesto y alertas"] -.- R1
+  MON -.- R2
+  MON -.- R3

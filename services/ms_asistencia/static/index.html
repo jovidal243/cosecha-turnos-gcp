@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f3a2b">
+  <title>Turnos Cosecha</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <div class="marca">
+    <img src="icono.svg" alt="" width="28" height="28">
+    <div><strong>Turnos Cosecha</strong><small>Gestión y validación de asistencia · datos sintéticos</small></div>
+  </div>
+  <div class="estado">
+    <span id="red" class="pill">—</span>
+    <span id="pendientes" class="pill">0 por sincronizar</span>
+    <span id="rol" class="pill"></span>
+    <button id="salir" class="link" hidden>Salir</button>
+  </div>
+</header>
+
+<section id="login" class="tarjeta angosta">
+  <h2>Ingresar</h2>
+  <p class="nota">Use el token entregado por el administrador. En la demo local: <code>demo-supervisor</code>, <code>demo-jefe</code> o <code>demo-analista</code>.</p>
+  <form id="form-login">
+    <input id="token" type="password" placeholder="Token de acceso" required autocomplete="off">
+    <button type="submit">Entrar</button>
+  </form>
+  <p id="login-error" class="error"></p>
+</section>
+
+<main id="principal" hidden>
+  <nav>
+    <button data-tab="marcar" class="activo">Marcar</button>
+    <button data-tab="jornadas">Jornadas</button>
+    <button data-tab="alertas">Alertas</button>
+    <button data-tab="ia">Indicadores e IA</button>
+  </nav>
+
+  <section id="tab-marcar" class="tab">
+    <div class="tarjeta">
+      <h2>Registrar marcación</h2>
+      <label>Frente
+        <select id="frente"></select>
+      </label>
+      <label>Trabajador (código o QR del carné)
+        <div class="fila">
+          <input id="codigo" list="lista-trabajadores" placeholder="Ej. T012 o INC-COS-T012" autocomplete="off">
+          <button id="btn-qr" type="button" class="secundario">Escanear QR</button>
+        </div>
+        <datalist id="lista-trabajadores"></datalist>
+      </label>
+      <video id="video" playsinline hidden></video>
+      <label class="check"><input type="checkbox" id="simular-gps" checked> Usar la ubicación del frente (demo fuera de campo)</label>
+      <div class="fila botones">
+        <button id="btn-entrada" class="grande">Entrada</button>
+        <button id="btn-salida" class="grande oscuro">Salida</button>
+      </div>
+      <p id="msg-marcar" class="mensaje"></p>
+    </div>
+    <div class="tarjeta">
+      <h3>Últimas marcaciones en este dispositivo</h3>
+      <ul id="ultimas" class="lista"></ul>
+    </div>
+  </section>
+
+  <section id="tab-jornadas" class="tab" hidden>
+    <div class="tarjeta">
+      <div class="filtros">
+        <label>Fecha <input type="date" id="f-fecha"></label>
+        <label>Estado
+          <select id="f-estado">
+            <option value="">Todos</option><option>observado</option><option>valido</option>
+            <option>aprobado</option><option>rechazado</option><option>abierta</option>
+          </select>
+        </label>
+        <button id="btn-cargar" class="secundario">Actualizar</button>
+      </div>
+      <div class="tabla-scroll"><table id="tabla-jornadas">
+        <thead><tr><th>Trabajador</th><th>Frente</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Estado</th><th>Hallazgos y explicación IA</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="tab-alertas" class="tab" hidden>
+    <div class="tarjeta">
+      <div class="filtros"><label>Fecha <input type="date" id="a-fecha"></label><button id="btn-alertas" class="secundario">Actualizar</button></div>
+      <ul id="lista-alertas" class="lista alertas"></ul>
+    </div>
+  </section>
+
+  <section id="tab-ia" class="tab" hidden>
+    <div class="tarjeta">
+      <div class="filtros"><label>Fecha <input type="date" id="k-fecha"></label><button id="btn-kpis" class="secundario">Actualizar</button>
+        <button id="btn-cierre" class="secundario" hidden>Ejecutar cierre diario (demo local)</button></div>
+      <div id="kpis" class="kpis"></div>
+    </div>
+    <div class="tarjeta">
+      <h3>Resumen del cierre diario <span class="etiqueta-ia" id="origen-resumen"></span></h3>
+      <pre id="resumen" class="resumen">—</pre>
+    </div>
+    <div class="tarjeta">
+      <h3>Pregúntale a los datos (Gemini)</h3>
+      <form id="form-ia" class="fila">
+        <input id="pregunta" placeholder="¿Qué frente tuvo más horas extra?" maxlength="500">
+        <button type="submit">Preguntar</button>
+      </form>
+      <div id="respuesta" class="respuesta"></div>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

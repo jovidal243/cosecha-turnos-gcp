@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+.datos_locales
+docs
+tests
+**/__pycache__
+infra
+*.md

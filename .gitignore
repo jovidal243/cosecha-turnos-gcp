@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+.datos_locales/
+infra/variables.env
+*.joblib
+!ml/modelo/.gitkeep
+.DS_Store
+infra/tokens.local.txt

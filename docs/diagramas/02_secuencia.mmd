@@ -1,0 +1,35 @@
+sequenceDiagram
+  autonumber
+  actor S as Supervisor (PWA)
+  participant A as ms-asistencia
+  participant F as Firestore
+  participant P as Pub/Sub
+  participant V as ms-validacion
+  participant G as Gemini (Vertex AI)
+  participant B as BigQuery
+  actor J as Jefe de frente
+  S->>S: Lee QR, toma GPS, genera UUID y guarda en IndexedDB
+  Note over S,A: Sin señal, la marcación espera en el dispositivo y se envía al recuperar conexión
+  S->>A: POST /api/marcaciones/lote (token Bearer)
+  A->>F: create(marcación) idempotente por UUID
+  A->>P: AsistenciaRegistrada (ordering key = trabajador)
+  A-->>S: 202 creada / duplicada
+  P->>V: push OIDC
+  V->>F: lee trabajador, frente, turno y jornadas
+  alt entrada
+    V->>V: reglas: traslape, geocerca, descanso, turno
+    V->>F: abre jornada
+  else salida
+    V->>V: reglas + Isolation Forest
+    opt observado o rechazado
+      V->>G: explicar hallazgos (datos seudonimizados)
+      G-->>V: explicación en lenguaje natural
+      V->>P: AlertaGenerada
+    end
+    V->>F: cierra jornada (valido / observado / rechazado)
+    V->>B: jornadas_validadas
+  end
+  V-->>P: 204 (ack)
+  J->>A: GET /api/jornadas?estado=observado
+  J->>A: POST /api/jornadas/{id}/decision
+  A->>F: aprobado / rechazado + auditoría

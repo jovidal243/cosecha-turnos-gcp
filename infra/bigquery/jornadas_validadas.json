@@ -1,0 +1,17 @@
+[
+  {"name": "jornada_id", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "fecha", "type": "DATE", "mode": "REQUIRED"},
+  {"name": "codigo_trabajador", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "cargo", "type": "STRING"},
+  {"name": "frente_id", "type": "STRING"},
+  {"name": "entrada_ts", "type": "TIMESTAMP"},
+  {"name": "salida_ts", "type": "TIMESTAMP"},
+  {"name": "horas_trabajadas", "type": "FLOAT"},
+  {"name": "horas_programadas", "type": "FLOAT"},
+  {"name": "horas_extra", "type": "FLOAT"},
+  {"name": "estado", "type": "STRING"},
+  {"name": "reglas", "type": "STRING", "mode": "REPEATED"},
+  {"name": "score_anomalia", "type": "FLOAT"},
+  {"name": "es_anomalia", "type": "BOOLEAN"},
+  {"name": "validada_en", "type": "TIMESTAMP"}
+]

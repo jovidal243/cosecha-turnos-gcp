@@ -1,0 +1,11 @@
+{
+  "name": "Turnos Cosecha",
+  "short_name": "Turnos",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#f4f5f1",
+  "theme_color": "#1f3a2b",
+  "lang": "es",
+  "icons": [{ "src": "icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
