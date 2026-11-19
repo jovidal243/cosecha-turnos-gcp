@@ -12,7 +12,7 @@ class AlmacenLocal:
         destino = os.path.join(self.raiz, ruta)
         os.makedirs(os.path.dirname(destino), exist_ok=True)
         modo = "wb" if isinstance(contenido, bytes) else "w"
-        with open(destino, modo, **({} if modo == "wb" else {"encoding": "utf-8"})) as f:
+        with open(destino, modo, **({} if modo == "wb" else {"encoding": "utf-8", "newline": ""})) as f:
             f.write(contenido)
         return f"file://{os.path.abspath(destino)}"
 
