@@ -5,6 +5,8 @@
 
 const $ = (s) => document.querySelector(s);
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// Texto de la IA: se escapa y solo se interpreta **negrita** (por si el modelo usa Markdown)
+const fmt = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#+\s*/gm, "");
 const hora = (ts) => (ts ? new Date(ts).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—");
 const hoyISO = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
@@ -183,7 +185,7 @@ async function cargarJornadas() {
   tb.innerHTML = js.map((j) => {
     const hs = (j.hallazgos?.length ? j.hallazgos : j.hallazgos_entrada || [])
       .map((h) => `<div class="hallazgo">${esc(h.mensaje)} <code>${esc(h.regla)}</code></div>`).join("");
-    const exp = j.explicacion_ia ? `<div class="explicacion">IA: ${esc(j.explicacion_ia)}</div>` : "";
+    const exp = j.explicacion_ia ? `<div class="explicacion">IA: ${fmt(j.explicacion_ia)}</div>` : "";
     const acciones = ROL === "jefe_frente" && j.estado === "observado"
       ? `<button class="mini" data-d="aprobar" data-id="${esc(j.id)}">Aprobar</button> <button class="mini secundario" data-d="rechazar" data-id="${esc(j.id)}">Rechazar</button>` : "";
     return `<tr><td><b>${esc(j.codigo_trabajador)}</b><br><span class="nota">${esc(j.cargo)}</span></td><td>${esc(j.frente_id)}</td>
@@ -203,7 +205,7 @@ async function cargarAlertas() {
   const as = await api(`/api/alertas?fecha=${$("#a-fecha").value}`);
   $("#lista-alertas").innerHTML = as.map((a) =>
     `<li><span class="badge b-${esc(a.estado_registro)}">${esc(a.tipo)}</span> <b>${esc(a.codigo_trabajador)}</b> · ${esc(a.frente_id)} · ${hora(a.creada_en)}
-     <div class="explicacion">${esc(a.explicacion_ia)} <span class="etiqueta-ia">(${esc(a.origen_explicacion)})</span></div></li>`
+     <div class="explicacion">${fmt(a.explicacion_ia)} <span class="etiqueta-ia">(${esc(a.origen_explicacion)})</span></div></li>`
   ).join("") || '<li class="nota">Sin alertas pendientes.</li>';
 }
 
@@ -220,7 +222,7 @@ async function cargarKpis() {
   $("#kpis").innerHTML = tarjetas.map(([t, v]) => `<div class="kpi"><b>${esc(v)}</b><span>${esc(t)}</span></div>`).join("");
   try {
     const r = await api(`/api/resumenes/${f}`);
-    $("#resumen").textContent = r.resumen;
+    $("#resumen").innerHTML = fmt(r.resumen);
     $("#origen-resumen").textContent = `(${r.origen_resumen})`;
   } catch (e) {
     $("#resumen").textContent = "Aún no se ha ejecutado el cierre diario de esta fecha.";
@@ -235,7 +237,7 @@ async function preguntar(ev) {
   $("#respuesta").textContent = "Consultando…";
   try {
     const r = await api("/api/asistente", { method: "POST", body: JSON.stringify({ pregunta, fecha: $("#k-fecha").value }) });
-    $("#respuesta").innerHTML = `${esc(r.texto)}<div class="etiqueta-ia">Origen: ${esc(r.origen)}</div>`;
+    $("#respuesta").innerHTML = `${fmt(r.texto)}<div class="etiqueta-ia">Origen: ${esc(r.origen)}</div>`;
   } catch (e) { $("#respuesta").textContent = e.message; }
 }
 

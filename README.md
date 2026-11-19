@@ -7,6 +7,8 @@ Esta plataforma serverless captura en campo los turnos y la asistencia del perso
 
 > Todos los datos del repositorio son **sintéticos**. No contiene información real de trabajadores (Ley 1581 de 2012).
 
+**Desplegado en Google Cloud** (proyecto `cosecha-turnos-uao`, 18/11/2026): [ms-asistencia-s65h3bbweq-uc.a.run.app/app/](https://ms-asistencia-s65h3bbweq-uc.a.run.app/app/). El acceso es con token por rol; la evidencia del despliegue está en la sección 9.1 del documento.
+
 **Documento del proyecto:** [docs/documento-proyecto.md](docs/documento-proyecto.md) (versión Word en `docs/`) · **Decisiones de arquitectura:** [docs/adr/](docs/adr/README.md)
 
 ## Arquitectura

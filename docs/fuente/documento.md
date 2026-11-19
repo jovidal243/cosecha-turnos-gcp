@@ -16,7 +16,8 @@ lang: es
 | Proveedor cloud | Google Cloud (región us-central1) |
 | Servicios de nube implementados | Cloud Run, Pub/Sub, Firestore, BigQuery, Cloud Storage, Vertex AI (Gemini), Secret Manager, Cloud Scheduler, Artifact Registry, Cloud Build, Cloud Logging y Monitoring |
 | IA generativa | Gemini 3.8 Flash en Vertex AI (SDK google-genai) |
-| Repositorio | `cosecha-turnos-gcp` en GitHub (código, infraestructura, pruebas y esta documentación) |
+| Repositorio | [github.com/jovidal243/cosecha-turnos-gcp](https://github.com/jovidal243/cosecha-turnos-gcp) (código, infraestructura, pruebas y esta documentación) |
+| Despliegue | Proyecto `cosecha-turnos-uao` en Google Cloud, desplegado el 18 de noviembre de 2026 · aplicación: [ms-asistencia-s65h3bbweq-uc.a.run.app/app/](https://ms-asistencia-s65h3bbweq-uc.a.run.app/app/) |
 | Datos | 100 % sintéticos: no se usa información real de trabajadores (Ley 1581 de 2012) |
 
 # 2. Definición y descripción del proyecto
@@ -214,9 +215,36 @@ Controles FinOps: escala a cero, instancias máximas por servicio, Gemini solo e
 
 El caso T034 muestra el valor del modelo: ninguna regla lo detecta, pero el Isolation Forest lo marca como atípico.
 
-![Consola del jefe de frente: jornadas observadas con hallazgos y explicación](capturas/bn/02_jornadas.png)
+## 9.1 Evidencia del despliegue en Google Cloud
 
-![Indicadores, resumen del cierre y asistente de IA generativa](capturas/bn/04_ia.png)
+La solución se desplegó el 18 de noviembre de 2026 en el proyecto `cosecha-turnos-uao` (región us-central1) con los scripts del repositorio, y la misma simulación produjo en la nube los mismos resultados que en local.
+
+| Evidencia | Resultado |
+|---|---|
+| Cloud Build (`infra/02_desplegar.sh`) | Pruebas, 3 imágenes y 3 despliegues: `STATUS: SUCCESS` en 3 min 19 s |
+| Cloud Run | ms-asistencia (público, `https://ms-asistencia-s65h3bbweq-uc.a.run.app`); ms-validacion y ms-reportes (privados, solo OIDC) |
+| Salud del servicio | `/salud` responde `{"estado":"ok","modo":"gcp"}` |
+| Pub/Sub y validación | 160 marcaciones procesadas; el 17/11/2026: 39 jornadas, 34 válidas, 5 observadas y 2 marcaciones rechazadas |
+| Cierre diario y nómina | 34 jornadas en `gs://cosecha-turnos-uao-cosecha-turnos/nomina/fecha=2026-11-17/horas_validadas.csv`; 5 pendientes de decisión |
+| Cloud Scheduler | Tarea `cierre-diario` a las 05:30, zona America/Bogota, con token OIDC |
+| Gemini en Vertex AI | Explicaciones y resumen diario con origen `gemini:gemini-3.8-flash` |
+
+Explicación generada por Gemini para la jornada observada de T031, tal como la ve el jefe de frente:
+
+> La jornada del tractorista T031 en el frente F01 quedó en estado 'observado' por el incumplimiento de la regla R02_DESCANSO_MINIMO, al registrarse únicamente 6.16 horas de descanso previo frente al mínimo establecido de 8 horas. Como acción concreta, se sugiere al jefe de frente revisar y ajustar la programación de turnos del trabajador para garantizar que se cumpla con el tiempo mínimo de descanso requerido antes de iniciar su labor.
+
+![Aplicación en Cloud Run: jornada observada con la explicación escrita por Gemini](capturas/bn/nube_jornadas.png)
+
+![Aplicación en Cloud Run: indicadores del día y resumen del cierre redactado por Gemini](capturas/bn/nube_indicadores.png)
+
+## 9.2 Lecciones del despliegue
+
+| Situación encontrada | Causa | Ajuste aplicado |
+|---|---|---|
+| Error 429 al crear cuentas de servicio | Límite de cuentas creadas por minuto en un proyecto nuevo | `01_aprovisionar.sh` crea una a la vez y reintenta tras 65 s |
+| 2 jornadas abiertas en el primer cierre | Arranque en frío de Cloud Run; Pub/Sub aún entregaba salidas | `04_demo.sh` espera hasta que no queden jornadas abiertas |
+| Pruebas fallidas en Windows | Windows no trae la base de zonas horarias y cambia los saltos de línea del CSV | Dependencia `tzdata` y escritura del CSV sin conversión de saltos de línea |
+| Asteriscos sueltos en el resumen | Gemini respondía con formato Markdown | Instrucción de texto plano y presentación de negritas en la app |
 
 # 10. Despliegue
 

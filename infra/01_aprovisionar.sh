@@ -52,9 +52,19 @@ PROJECT_ID=$PROJECT_ID BQ_DATASET=$BQ_DATASET envsubst < infra/bigquery/vista_ho
   | bq query --use_legacy_sql=false --location="$REGION" >/dev/null
 
 echo "==> 7/9 Cuentas de servicio (mínimo privilegio)"
+# Google limita cuántas cuentas de servicio se crean por minuto en un proyecto nuevo (error 429):
+# se crea una a la vez y, si se alcanza el límite, se espera y se reintenta.
+crear_sa() {
+  gcloud iam service-accounts describe "$(sa "$1")" >/dev/null 2>&1 && return 0
+  for intento in 1 2 3 4; do
+    gcloud iam service-accounts create "$1" --display-name="$1 (turnos cosecha)" && { sleep 5; return 0; }
+    echo "    Límite de creación de cuentas alcanzado; reintento ${intento}/4 en 65 s..."
+    sleep 65
+  done
+  return 1
+}
 for c in sa-asistencia sa-validacion sa-reportes sa-invocador sa-cloudbuild; do
-  gcloud iam service-accounts describe "$(sa $c)" >/dev/null 2>&1 \
-    || gcloud iam service-accounts create "$c" --display-name="$c (turnos cosecha)"
+  crear_sa "$c"
 done
 proyecto() { gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$(sa "$1")" --role="$2" --condition=None >/dev/null; }
 for c in sa-asistencia sa-validacion sa-reportes; do

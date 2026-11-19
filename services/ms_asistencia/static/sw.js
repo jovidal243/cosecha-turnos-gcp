@@ -1,6 +1,6 @@
 // Service worker: la app abre sin señal (cache-first para archivos estáticos).
 // Las llamadas a /api nunca se cachean: las marcaciones viven en IndexedDB hasta sincronizar.
-const CACHE = "turnos-cosecha-v2";
+const CACHE = "turnos-cosecha-v3";
 const ESTATICOS = ["./", "index.html", "estilos.css", "app.js", "icono.svg", "manifest.json"];
 
 self.addEventListener("install", (e) => {
