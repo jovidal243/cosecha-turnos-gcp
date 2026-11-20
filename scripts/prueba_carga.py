@@ -66,10 +66,16 @@ async def ejecutar(url: str, token: str, escenario: str, total: int, concurrenci
     cabeceras = {"Authorization": f"Bearer {token}"}
     medidas: dict[str, list[float]] = {}
     errores: dict[str, int] = {}
-    contador = {"i": 0, "escritura": 0}
+    contador = {"i": 0, "escritura": 0, "red": 0}
     rnd = random.Random(7)
+    # Cloud Shell y algunas redes anuncian IPv6 sin ruta estable: forzar IPv4 y reintentar solo la conexión
+    # evita medir esperas de red del cliente como si fueran latencia del servicio.
+    transporte = httpx.AsyncHTTPTransport(local_address="0.0.0.0", retries=2)
+    limites = httpx.Limits(max_connections=concurrencia, max_keepalive_connections=concurrencia)
+    tiempos = httpx.Timeout(30, connect=5)
 
-    async with httpx.AsyncClient(base_url=url, headers=cabeceras, timeout=30) as cliente:
+    async with httpx.AsyncClient(base_url=url, headers=cabeceras, timeout=tiempos, limits=limites,
+                                 transport=transporte) as cliente:
         t0 = time.perf_counter()
         r = await cliente.get("/salud")
         primera_ms = (time.perf_counter() - t0) * 1000
@@ -91,6 +97,9 @@ async def ejecutar(url: str, token: str, escenario: str, total: int, concurrenci
                     nombre, ruta = LECTURAS[i % len(LECTURAS)]
                     resp = await cliente.get(ruta)
                     ok = resp.status_code == 200
+            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout):
+                ok = False
+                contador["red"] += 1
             except httpx.HTTPError:
                 ok = False
             ms = (time.perf_counter() - inicio) * 1000
@@ -121,7 +130,7 @@ async def ejecutar(url: str, token: str, escenario: str, total: int, concurrenci
         "duracion_s": duracion, "rps": total / duracion if duracion else 0,
         "primera_ms": primera_ms, "filas": filas,
         "global": {"p50": percentil(todas, 50), "p95": percentil(todas, 95), "p99": percentil(todas, 99),
-                   "errores": sum(errores.values())},
+                   "errores": sum(errores.values()), "red": contador["red"]},
     }
 
 
@@ -134,7 +143,8 @@ def a_markdown(res: dict) -> str:
         f"- Duración: {res['duracion_s']:.1f} s · rendimiento: **{res['rps']:.1f} solicitudes/s**",
         f"- Primera solicitud (`/salud`, incluye arranque en frío si el servicio estaba en cero): {res['primera_ms']:.0f} ms",
         f"- Global: p50 {res['global']['p50']:.0f} ms · **p95 {res['global']['p95']:.0f} ms** · "
-        f"p99 {res['global']['p99']:.0f} ms · errores {res['global']['errores']}",
+        f"p99 {res['global']['p99']:.0f} ms · errores {res['global']['errores']} "
+        f"(de conexión del cliente: {res['global'].get('red', 0)})",
         "",
         "| Endpoint | Solicitudes | Errores | p50 (ms) | p95 (ms) | p99 (ms) | Máx. (ms) |",
         "|---|---|---|---|---|---|---|",

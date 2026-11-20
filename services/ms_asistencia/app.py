@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Literal
 
@@ -26,7 +27,24 @@ from common.tiempo import ahora, fecha_local, hoy, iso, parse
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("ms-asistencia")
 
+@asynccontextmanager
+async def calentar(_app: FastAPI):
+    """Abre las conexiones con Firestore y Pub/Sub antes de aceptar tráfico.
+
+    Uvicorn no abre el puerto hasta que termina este arranque, así que Cloud Run no envía solicitudes a una
+    instancia nueva mientras obtiene credenciales y abre canales gRPC (la prueba de carga mostró que esa
+    primera solicitud podía tardar 5-9 s).
+    """
+    try:
+        contexto.repo().get("marcaciones", "_calentamiento")
+        contexto.bus()
+    except Exception:  # noqa: BLE001 - si falla, el servicio arranca igual y se conecta en la primera solicitud
+        log.warning("No se pudo precalentar las conexiones", exc_info=True)
+    yield
+
+
 app = FastAPI(
+    lifespan=calentar,
     title="ms-asistencia",
     version="1.0.0",
     description="Registro y consulta de turnos y asistencia - Gerencia de Cosecha (datos sintéticos)",

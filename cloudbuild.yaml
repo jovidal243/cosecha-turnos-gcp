@@ -73,6 +73,6 @@ steps:
            "--image", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/ms-asistencia:${_TAG}",
            "--region", "${_REGION}", "--allow-unauthenticated",
            "--service-account", "sa-asistencia@$PROJECT_ID.iam.gserviceaccount.com",
-           "--memory", "512Mi", "--min-instances", "0", "--max-instances", "3", "--concurrency", "40",
+           "--memory", "512Mi", "--min-instances", "1", "--max-instances", "5", "--concurrency", "10",
            "--set-secrets", "API_TOKENS=api-tokens:latest",
            "--set-env-vars", "MODO=gcp,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,BQ_DATASET=${_BQ_DATASET},GEMINI_MODEL=${_GEMINI_MODEL},GEMINI_LOCATION=${_GEMINI_LOCATION}"]
