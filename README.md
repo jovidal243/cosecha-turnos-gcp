@@ -57,7 +57,7 @@ Abra http://localhost:8080/app/ con alguno de estos tokens:
 `--simular` carga dos días con siete casos atípicos. Para verlos, consulte la fecha de **ayer** en *Jornadas*, *Alertas* e *Indicadores e IA*. En modo local, Firestore se reemplaza por memoria, Pub/Sub por un bus en el mismo proceso y Gemini por plantillas. BigQuery y Cloud Storage se escriben en `.datos_locales/`. La API se documenta sola en http://localhost:8080/docs.
 
 ```bash
-python -m pytest -q   # 19 pruebas: reglas, modelo y flujo de punta a punta
+python -m pytest -q   # 22 pruebas: reglas, modelo, prueba de carga y flujo de punta a punta
 ruff check .
 ```
 

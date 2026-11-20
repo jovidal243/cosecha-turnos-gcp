@@ -90,7 +90,7 @@ El profesor exige mínimo cinco servicios de nube más uno de IA generativa. La 
 | 9 | Artifact Registry | DevOps | Imágenes Docker de los servicios |
 | 10 | Cloud Build | CI/CD | Pruebas, construcción y despliegue |
 | 11 | IAM (cuentas de servicio) | Seguridad | Una identidad por servicio con mínimo privilegio |
-| 12 | Cloud Logging y Monitoring | Observabilidad | Registros, métricas y presupuesto con alertas |
+| 12 | Cloud Logging y Monitoring | Observabilidad | Registros, métricas, verificación de `/salud`, 4 alertas por correo, tablero y presupuesto |
 
 ## 4.3 Microservicios y API
 
@@ -149,7 +149,7 @@ Controles: temperatura 0,2; instrucción de sistema que prohíbe inventar datos 
 
 # 5. Registro de decisiones de arquitectura (ADR)
 
-Se documentan 12 decisiones. Cada una registra contexto, alternativas, justificación técnica y criterio FinOps. También están como archivos individuales en `docs/adr/`.
+Se documentan 13 decisiones. Cada una registra contexto, alternativas, justificación técnica y criterio FinOps. También están como archivos individuales en `docs/adr/`.
 
 | ID | Decisión | Alternativas evaluadas | Estado |
 |---|---|---|---|
@@ -165,6 +165,7 @@ Se documentan 12 decisiones. Cada una registra contexto, alternativas, justifica
 | ADR-10 | PWA offline-first con IndexedDB e idempotencia por UUID | App nativa Android; web solo en línea. | Aprobado |
 | ADR-11 | Identificación por QR del carné + geolocalización (sin biometría) | Huella o reconocimiento facial; planilla con firma. | Aprobado |
 | ADR-12 | Infraestructura con scripts gcloud idempotentes y CI/CD con Cloud Build y GitHub Actions | Terraform; despliegue manual por consola. | Aprobado; Terraform propuesto |
+| ADR-13 | Escalado de ms-asistencia y observabilidad definidos con pruebas de carga | Mantener 40 solicitudes por instancia y escala a cero; 3 instancias siempre encendidas; más CPU por instancia. | Aprobado |
 
 ### ADR-01. Google Cloud como proveedor de nube
 
@@ -298,6 +299,17 @@ Se documentan 12 decisiones. Cada una registra contexto, alternativas, justifica
 - **Criterio FinOps:** Cloud Build: minutos gratis diarios; infra/99_eliminar.sh borra todo tras la sustentación.
 - **Consecuencias:** Sin archivo de estado, los cambios manuales en consola no se detectan automáticamente.
 
+### ADR-13. Escalado de ms-asistencia y observabilidad definidos con pruebas de carga
+
+**Estado:** Aprobado
+
+- **Contexto:** El objetivo de registro es p95 < 300 ms en POST /api/marcaciones. La primera prueba de carga (25 usuarios simultáneos) mostró colas de 5 a 30 s; había que separar la latencia del servicio de la del cliente y de los arranques de instancias nuevas.
+- **Decisión:** ms-asistencia con 10 solicitudes simultáneas por instancia, entre 1 y 5 instancias, y conexiones a Firestore y Pub/Sub abiertas al arrancar (antes de recibir tráfico). La latencia oficial se mide en el servidor (registros de Cloud Run); el cliente la complementa. Cloud Monitoring con verificación de /salud, 4 alertas por correo y un tablero de operación.
+- **Alternativas:** Mantener 40 solicitudes por instancia y escala a cero; 3 instancias siempre encendidas; más CPU por instancia.
+- **Justificación técnica:** Con 40 solicitudes por instancia una sola CPU atendía toda la ráfaga. Con 3 instancias encendidas la cola del cliente no desapareció, lo que demostró que venía de la red de Cloud Shell y no del servicio. Medido en el servidor, el registro cumple: p95 de 209 a 246 ms.
+- **Criterio FinOps:** Una instancia mínima inactiva cuesta unos USD 8 al mes en us-central1; tres costarían el triple sin mejorar la medida del servidor. Tras la sustentación, infra/99_eliminar.sh la elimina.
+- **Consecuencias:** La primera marcación tras un periodo inactivo ya no paga el arranque en frío. Las ráfagas que exigen instancias nuevas pueden demorar algunas solicitudes; la PWA offline-first (ADR-10) las conserva en el celular y las reintenta, así que el supervisor no espera.
+
 
 # 6. Stack tecnológico
 
@@ -310,7 +322,7 @@ Se documentan 12 decisiones. Cada una registra contexto, alternativas, justifica
 | IA | scikit-learn (Isolation Forest), google-genai (Gemini) | Anomalías e IA generativa |
 | DevOps | Docker, Artifact Registry, Cloud Build, GitHub Actions, gcloud | CI/CD e infraestructura reproducible |
 | Seguridad | IAM, Secret Manager, OIDC | Identidad, secretos y acceso entre servicios |
-| Calidad | pytest (19 pruebas), ruff | Pruebas unitarias y de punta a punta |
+| Calidad | pytest (22 pruebas), ruff | Pruebas unitarias y de punta a punta |
 
 # 7. Seguridad y protección de datos
 
@@ -329,7 +341,7 @@ Supuestos del piloto: 1 a 5 frentes, 40 trabajadores, ~80 marcaciones al día, ~
 
 | Servicio | Consumo estimado al mes | Costo estimado |
 |---|---|---|
-| Cloud Run (3 servicios, escala a cero) | < 50.000 solicitudes | USD 0 (capa gratuita) |
+| Cloud Run (3 servicios; ms-asistencia con 1 instancia mínima) | < 50.000 solicitudes + instancia mínima inactiva | ≈ USD 8 (instancia mínima, ADR-13) |
 | Firestore | ~3.000 escrituras y ~20.000 lecturas al día | USD 0 (capa gratuita) |
 | Pub/Sub | < 10 MB | USD 0 |
 | BigQuery | < 100 MB almacenados, consultas particionadas | USD 0 |
@@ -337,13 +349,13 @@ Supuestos del piloto: 1 a 5 frentes, 40 trabajadores, ~80 marcaciones al día, ~
 | Cloud Scheduler, Secret Manager | 1 tarea, 1 secreto | USD 0 |
 | Artifact Registry | ~1,5 GB de imágenes | ≈ USD 0,10 |
 | Vertex AI – Gemini 3.8 Flash | ~0,9 M tokens de entrada y ~0,7 M de salida | ≈ USD 3,4 (tarifa introductoria hasta el 31/12/2026); ≈ USD 6,8 desde 2027 |
-| **Total** | | **≈ USD 4 a 8 al mes** |
+| **Total** | | **≈ USD 12 a 16 al mes** |
 
-Controles FinOps: escala a cero, instancias máximas por servicio, Gemini solo en jornadas no válidas, presupuesto de USD 20 con alertas al 50 %, 90 % y 100 %, y script `infra/99_eliminar.sh` para borrar los recursos al terminar. Las tarifas deben confirmarse en la calculadora de precios de Google Cloud antes de pasar a producción.
+Controles FinOps: escala a cero en ms-validacion y ms-reportes, instancias máximas por servicio, Gemini solo en jornadas no válidas, presupuesto de USD 20 con alertas al 50 %, 90 % y 100 %, y script `infra/99_eliminar.sh` para borrar los recursos al terminar. Las tarifas deben confirmarse en la calculadora de precios de Google Cloud antes de pasar a producción.
 
 # 9. Pruebas y resultados
 
-**Pruebas automáticas (19, todas aprobadas):** reglas de negocio (8), modelo de anomalías (3) y flujo de punta a punta (8): autenticación y roles, jornada válida, idempotencia, jornada larga observada con explicación y alerta, traslape y salida sin entrada rechazados, marcación con hora futura, decisión del jefe de frente con cierre y archivo de nómina, y simulación completa.
+**Pruebas automáticas (22, todas aprobadas):** reglas de negocio (8), modelo de anomalías (3), utilidades de la prueba de carga (3) y flujo de punta a punta (8): autenticación y roles, jornada válida, idempotencia, jornada larga observada con explicación y alerta, traslape y salida sin entrada rechazados, marcación con hora futura, decisión del jefe de frente con cierre y archivo de nómina, y simulación completa.
 
 **Simulación de dos días** (40 trabajadores, 5 frentes, 160 marcaciones) con siete casos atípicos inyectados el segundo día:
 
@@ -398,6 +410,34 @@ Explicación generada por Gemini para la jornada observada de T031, tal como la 
 | Pruebas fallidas en Windows | Windows no trae la base de zonas horarias y cambia los saltos de línea del CSV | Dependencia `tzdata` y escritura del CSV sin conversión de saltos de línea |
 | Asteriscos sueltos en el resumen | Gemini respondía con formato Markdown | Instrucción de texto plano y presentación de negritas en la app |
 
+## 9.3 Pruebas de carga y monitoreo
+
+El 19 de noviembre de 2026 se midió ms-asistencia en la nube con `scripts/prueba_carga.py` desde Cloud Shell: 25 usuarios simultáneos, solicitudes de lectura (alertas, jornadas e indicadores) y de registro de marcaciones. Las marcaciones de carga son sintéticas y llevan `origen="carga"`: pasan por las 10 reglas y el modelo, pero no consumen Gemini. La meta es **p95 < 300 ms** en `POST /api/marcaciones`.
+
+**Resultado medido por el servidor** (latencia que registra Cloud Run desde que recibe la solicitud hasta que responde):
+
+| Prueba | Solicitudes | p50 | p95 | p99 | Máx. | Meta p95 < 300 ms |
+|---|---|---|---|---|---|---|
+| Escritura (25 usuarios) | 500 registros | 96 ms | 246 ms | 407 ms | 7,4 s | Cumple |
+| Mixta, lecturas | 664 | 46 ms | 172 ms | 249 ms | 312 ms | — |
+| Mixta, registros | 336 | 104 ms | 209 ms | 314 ms | 327 ms | Cumple |
+
+La prueba mixta (1.000 solicitudes, 70 % lecturas) terminó sin errores, a 67 solicitudes por segundo, y el servidor registró las 1.000 solicitudes. Medido desde el cliente, el p95 de esa prueba fue 566 ms: la diferencia es el viaje de red entre Cloud Shell y Cloud Run, más algunas conexiones que tardaron en abrirse.
+
+**Cómo se llegó a ese resultado.** La primera medición no fue buena, y cada ajuste se decidió con datos:
+
+| Medición (cliente, 25 usuarios) | Resultado | Hallazgo y ajuste |
+|-------|-------|--------------------|
+| 1. Lecturas, configuración inicial | 21 de 500 errores; 4,7 sol./s; p95 20,3 s | El servidor registró 677 de 700 solicitudes y ninguna pasó de 3,3 s: las fallidas nunca llegaron. El script fuerza IPv4 y reintenta solo la conexión. |
+| 2. Lecturas, script corregido | sin errores; 33,8 sol./s; p95 1,4 s | Quedan colas de 5 a 7 s: una sola instancia (40 solicitudes a la vez, 1 CPU) atendía toda la ráfaga. |
+| 3. Registros, 10 solicitudes por instancia, 1 a 5 instancias | sin errores; 33,8 → 61,0 sol./s; p95 4,6 s → 275 ms | En frío empeora (instancias nuevas abren conexiones en la primera solicitud); con las instancias listas cumple. Se abren las conexiones a Firestore y Pub/Sub al arrancar. |
+| 4. Registros, conexiones abiertas al arrancar | sin errores; 44,4 sol./s; p95 631 ms | La mediana baja a 148 ms, pero sigue una cola de 7 a 10 s. El servidor solo registró 1 solicitud de más de 0,64 s, y las 2 instancias nuevas estuvieron listas en 1 y 4 s. |
+| 5. Registros, 3 instancias siempre encendidas | sin errores; 45,6 sol./s; p95 495 ms | La cola del cliente no desaparece, pero el servidor mide p95 de 246 ms: la cola viene de la red del cliente, no del servicio. Se deja 1 instancia (ADR-13). |
+
+**Monitoreo** (`infra/05_monitoreo.sh`): verificación de disponibilidad de `/salud` cada 5 minutos, alertas por correo para errores 5xx, mensajes en la dead-letter, latencia p95 mayor a 1 s y servicio caído, y un tablero de operación. Durante las pruebas no se disparó ninguna alerta: la dead-letter se mantuvo en cero y la cola de validación (`validacion-push`) se vació en uno o dos minutos después de cada ráfaga. La suscripción `alertas-auditoria` crece por diseño, porque guarda las alertas como registro de auditoría.
+
+![Tablero de Cloud Monitoring durante las pruebas de carga (19/11/2026, 8:40 a 9:30 p. m.)](capturas/nube_monitoreo.png)
+
 # 10. Despliegue
 
 Todo se ejecuta desde Cloud Shell, en la raíz del repositorio:
@@ -407,7 +447,9 @@ Todo se ejecuta desde Cloud Shell, en la raíz del repositorio:
 3. `bash infra/02_desplegar.sh`: Cloud Build ejecuta las pruebas, construye las 3 imágenes y despliega en Cloud Run.
 4. `bash infra/03_conectar_eventos.sh`: suscripción push con OIDC, tarea de Cloud Scheduler y carga de datos sintéticos.
 5. `bash infra/04_demo.sh`: simula dos días y ejecuta el cierre.
-6. Tras la sustentación: `bash infra/99_eliminar.sh`.
+6. `bash infra/05_monitoreo.sh`: alertas por correo, verificación de disponibilidad y tablero.
+7. Prueba de carga: `python3 -m scripts.prueba_carga --url <URL de ms-asistencia> --token <token> --escenario mixto`.
+8. Tras la sustentación: `bash infra/99_eliminar.sh`.
 
 Sin Google Cloud, el sistema completo corre en un solo proceso con `python -m scripts.run_local --simular`.
 
@@ -430,5 +472,6 @@ Sin Google Cloud, el sistema completo corre en un solo proceso con `python -m sc
 - Reentrenamiento mensual del modelo como Cloud Run Job con el histórico real de BigQuery.
 - Notificaciones de alertas por correo o Google Chat suscritas al tópico `alertas`.
 - Adaptador hacia SAP para cargar el archivo de horas validadas.
-- Pruebas de carga en GCP para medir la latencia p95 del registro y Terraform para gestionar el estado de la infraestructura.
+- Terraform para gestionar el estado de la infraestructura.
+- Repetir las pruebas de carga desde una máquina dentro de la misma región, para que la medida del cliente no incluya la red de Cloud Shell.
 - Conectar el modelo de predicción de horas extra del trabajo de grado al histórico de BigQuery.

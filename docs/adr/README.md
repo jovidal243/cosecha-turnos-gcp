@@ -14,3 +14,4 @@
 | [ADR-10](ADR-10-pwa-offline-first-con-indexeddb-e-idempotencia-por-uuid.md) | PWA offline-first con IndexedDB e idempotencia por UUID | Aprobado |
 | [ADR-11](ADR-11-identificacion-por-qr-del-carne-geolocalizacion-sin-biometri.md) | Identificación por QR del carné + geolocalización (sin biometría) | Aprobado |
 | [ADR-12](ADR-12-infraestructura-con-scripts-gcloud-idempotentes-y-ci-cd-con-.md) | Infraestructura con scripts gcloud idempotentes y CI/CD con Cloud Build y GitHub Actions | Aprobado; Terraform propuesto |
+| [ADR-13](ADR-13-escalado-de-ms-asistencia-y-observabilidad-definidos-con-pru.md) | Escalado de ms-asistencia y observabilidad definidos con pruebas de carga | Aprobado |
