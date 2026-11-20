@@ -73,7 +73,8 @@ def _resultado(texto_ia: str | None, respaldo: str) -> dict:
     return {"texto": respaldo, "origen": "plantilla"}
 
 
-def explicar_jornada(contexto: dict) -> dict:
+def explicar_jornada(contexto: dict, usar_ia: bool = True) -> dict:
+    """usar_ia=False fuerza la plantilla (p. ej. en pruebas de carga, para no consumir Gemini)."""
     prompt = (
         "Explica en máximo 3 frases por qué esta jornada quedó en estado "
         f"'{contexto.get('estado')}' y sugiere una acción concreta para el jefe de frente.\n"
@@ -88,7 +89,7 @@ def explicar_jornada(contexto: dict) -> dict:
     estado_txt = {"observado": "observada", "rechazado": "rechazada"}.get(contexto.get("estado"), contexto.get("estado"))
     sujeto = "Marcación" if contexto.get("tipo_marcacion") else "Jornada"
     respaldo = f"{sujeto} {estado_txt}: {'; '.join(mensajes) or 'sin detalle'}. Acción sugerida: {accion}"
-    return _resultado(generar(prompt), respaldo)
+    return _resultado(generar(prompt) if usar_ia else None, respaldo)
 
 
 def resumen_diario(fecha: str, kpis: dict, alertas: list[dict]) -> dict:

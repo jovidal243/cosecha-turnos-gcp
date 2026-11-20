@@ -1,0 +1,24 @@
+{
+  "displayName": "Turnos Cosecha · mensajes en la cola dead-letter",
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "Hay marcaciones sin procesar en marcaciones-dlq",
+      "conditionThreshold": {
+        "filter": "resource.type = \"pubsub_subscription\" AND resource.labels.subscription_id = \"marcaciones-dlq-sub\" AND metric.type = \"pubsub.googleapis.com/subscription/num_undelivered_messages\"",
+        "aggregations": [
+          {"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_MAX"}
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "0s",
+        "trigger": {"count": 1}
+      }
+    }
+  ],
+  "notificationChannels": ["__CANAL__"],
+  "documentation": {
+    "content": "Una o más marcaciones fallaron 5 veces en ms-validacion y quedaron en la cola dead-letter. Revisar los registros de ms-validacion y reenviar con: gcloud pubsub subscriptions pull marcaciones-dlq-sub --limit=10",
+    "mimeType": "text/markdown"
+  }
+}

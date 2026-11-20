@@ -13,7 +13,17 @@ Esta plataforma serverless captura en campo los turnos y la asistencia del perso
 
 ## Arquitectura
 
-![Arquitectura](docs/diagramas/01_arquitectura.png)
+![Arquitectura en Google Cloud](docs/diagramas/01_arquitectura.png)
+
+| Diagrama | Qué muestra |
+|---|---|
+| [Arquitectura](docs/diagramas/01_arquitectura.png) | Servicios, flujos y límites en Google Cloud |
+| [Flujo de una marcación](docs/diagramas/02_flujo.png) | Los 9 pasos, de la captura sin señal a la decisión del jefe de frente |
+| [Seguridad e identidades](docs/diagramas/05_seguridad.png) | Acceso público con token, servicios privados con OIDC y una cuenta de servicio por microservicio |
+| [CI/CD](docs/diagramas/06_cicd.png) | De GitHub y Cloud Shell a Cloud Run con Cloud Build y Artifact Registry |
+| [Estados](docs/diagramas/03_estados.png) · [Datos](docs/diagramas/04_datos.png) | Ciclo de vida de una jornada y colecciones de Firestore |
+
+Cada diagrama tiene su fuente editable en `docs/diagramas/html/` y versión en blanco y negro (`*_bn.png`) para documentos impresos.
 
 | # | Servicio de Google Cloud | Uso |
 |---|---|---|
@@ -62,7 +72,10 @@ bash infra/01_aprovisionar.sh      # APIs, Firestore, Pub/Sub, BigQuery, bucket,
 bash infra/02_desplegar.sh         # Cloud Build: pruebas → 3 imágenes → Cloud Run
 bash infra/03_conectar_eventos.sh  # suscripción push OIDC, Cloud Scheduler y datos sintéticos
 bash infra/04_demo.sh              # simula dos días y ejecuta el cierre diario
+bash infra/05_monitoreo.sh         # alertas por correo (5xx, dead-letter, latencia, disponibilidad) y tablero
 ```
+
+**Prueba de carga** (desde Cloud Shell o cualquier PC con Python): `python3 -m scripts.prueba_carga --url <URL de ms-asistencia> --token <token supervisor> --escenario mixto --solicitudes 1000 --concurrencia 25`. Mide p50/p95/p99 por endpoint y el arranque en frío, y agrega los resultados a `docs/resultados-carga.md`. Las marcaciones de carga llevan `origen="carga"`: se validan con las 10 reglas y el modelo, pero no consumen Gemini.
 
 Los tokens de acceso quedan en `infra/tokens.local.txt` (no se versiona). Al terminar la sustentación, ejecute `bash infra/99_eliminar.sh` para no generar costos.
 
@@ -110,6 +123,7 @@ Estimación para el piloto: **≈ USD 4 a 8 al mes**. Casi todo cabe en la capa 
 
 ```bash
 python docs/adr/adrs.py                       # ADR individuales desde la fuente única
-for f in docs/diagramas/*.mmd; do mmdc -c docs/diagramas/mermaid-config.json -b white -s 2 -i $f -o ${f%.mmd}.png; done
+python docs/diagramas/fuente/diagramas.py      # diagramas 01, 02, 05 y 06 (HTML → PNG, requiere playwright)
+for f in docs/diagramas/*.mmd; do mmdc -c docs/diagramas/mermaid-config.json -b white -s 2 -i $f -o ${f%.mmd}.png; done   # 03 y 04
 python -m scripts.construir_documento         # documento-proyecto.md + .docx en blanco y negro
 ```

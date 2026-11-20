@@ -22,6 +22,7 @@ from .reglas import PARAMETROS, Hallazgo, estado_final, reglas_entrada, reglas_s
 
 log = logging.getLogger(__name__)
 ACTOR = "ms-validacion"
+ORIGEN_CARGA = "carga"  # marcaciones de prueba de carga: explicación con plantilla, sin consumir Gemini
 
 
 def _turno_de(repo, codigo: str, fecha: str) -> dict | None:
@@ -85,7 +86,8 @@ def _rechazar_marcacion(repo, bus, m: dict, hallazgos: list[dict]) -> str:
     fecha = fecha_local(m["ts"])
     explicacion = ia.explicar_jornada(
         {"estado": "rechazado", "tipo_marcacion": m["tipo"], "codigo_trabajador": m["codigo_trabajador"],
-         "frente_id": m["frente_id"], "hora": m["ts"], "hallazgos": hallazgos}
+         "frente_id": m["frente_id"], "hora": m["ts"], "hallazgos": hallazgos},
+        usar_ia=m.get("origen") != ORIGEN_CARGA,
     )
     _cerrar_marcacion(repo, m, "rechazada", hallazgos=hallazgos, explicacion_ia=explicacion["texto"])
     _alerta(repo, bus, tipo="MarcacionRechazada", codigo=m["codigo_trabajador"], frente_id=m["frente_id"],
@@ -181,7 +183,8 @@ def _procesar_salida(repo, bus, m, ts, trabajador, abierta, distancia, radio) ->
                 "descanso_previo_h": abierta.get("descanso_previo_h"),
                 "score_anomalia": score,
                 "hallazgos": hallazgos,
-            }
+            },
+            usar_ia=m.get("origen") != ORIGEN_CARGA,
         )
 
     cambios = {

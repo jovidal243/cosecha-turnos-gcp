@@ -71,7 +71,7 @@ Diseñar e implementar en Google Cloud una arquitectura de microservicios server
 
 ## 4.1 Vista general
 
-![Arquitectura de la solución en Google Cloud](diagramas/01_arquitectura.png)
+![Arquitectura de la solución en Google Cloud: servicios, flujos y límites](diagramas/01_arquitectura.png)
 
 ## 4.2 Servicios de Google Cloud utilizados
 
@@ -102,7 +102,7 @@ El profesor exige mínimo cinco servicios de nube más uno de IA generativa. La 
 
 ## 4.4 Flujo de una marcación
 
-![Secuencia: captura, validación asíncrona y decisión](diagramas/02_secuencia.png)
+![Flujo de una marcación en 9 pasos: captura, validación asíncrona, IA y decisión](diagramas/02_flujo.png)
 
 ## 4.5 Ciclo de vida de una jornada
 
@@ -145,7 +145,7 @@ Controles: temperatura 0,2; instrucción de sistema que prohíbe inventar datos 
 
 ## 4.9 Despliegue y CI/CD
 
-![Pipeline de despliegue e identidades](diagramas/05_despliegue.png)
+![CI/CD: de GitHub y Cloud Shell a Cloud Run con Cloud Build y Artifact Registry](diagramas/06_cicd.png)
 
 <!-- ADRS -->
 
@@ -163,6 +163,8 @@ Controles: temperatura 0,2; instrucción de sistema que prohíbe inventar datos 
 | Calidad | pytest (19 pruebas), ruff | Pruebas unitarias y de punta a punta |
 
 # 7. Seguridad y protección de datos
+
+![Seguridad e identidades: acceso público con token, servicios privados con OIDC y una cuenta de servicio por microservicio](diagramas/05_seguridad.png)
 
 - **Mínimo privilegio:** cada microservicio usa su propia cuenta de servicio con solo los roles que necesita (p. ej., solo ms-asistencia publica en `marcaciones` y solo ms-validacion lee el modelo).
 - **Servicios internos privados:** ms-validacion y ms-reportes no aceptan tráfico anónimo; solo `sa-invocador` con token OIDC.
@@ -233,9 +235,9 @@ Explicación generada por Gemini para la jornada observada de T031, tal como la 
 
 > La jornada del tractorista T031 en el frente F01 quedó en estado 'observado' por el incumplimiento de la regla R02_DESCANSO_MINIMO, al registrarse únicamente 6.16 horas de descanso previo frente al mínimo establecido de 8 horas. Como acción concreta, se sugiere al jefe de frente revisar y ajustar la programación de turnos del trabajador para garantizar que se cumpla con el tiempo mínimo de descanso requerido antes de iniciar su labor.
 
-![Aplicación en Cloud Run: jornada observada con la explicación escrita por Gemini](capturas/bn/nube_jornadas.png)
+![Aplicación en Cloud Run: jornada observada con la explicación escrita por Gemini](capturas/nube_jornadas.png)
 
-![Aplicación en Cloud Run: indicadores del día y resumen del cierre redactado por Gemini](capturas/bn/nube_indicadores.png)
+![Aplicación en Cloud Run: indicadores del día y resumen del cierre redactado por Gemini](capturas/nube_indicadores.png)
 
 ## 9.2 Lecciones del despliegue
 

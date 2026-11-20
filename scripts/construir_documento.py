@@ -73,6 +73,53 @@ def _sin_sombreado(celda) -> None:
     tcPr.append(shd)
 
 
+# Diagramas anchos que van en una página horizontal para que se lean al imprimir (alt text que empieza así)
+HORIZONTALES = ("Arquitectura de la solución", "Flujo de una marcación", "Seguridad e identidades", "CI/CD:")
+
+
+def _sect_pr(base, horizontal: bool):
+    import copy
+
+    sp = copy.deepcopy(base)
+    pg = sp.find(qn("w:pgSz"))
+    ancho, alto = (15840, 12240) if horizontal else (12240, 15840)  # carta, en veinteavos de punto
+    pg.set(qn("w:w"), str(ancho))
+    pg.set(qn("w:h"), str(alto))
+    if horizontal:
+        pg.set(qn("w:orient"), "landscape")
+    elif pg.get(qn("w:orient")) is not None:
+        del pg.attrib[qn("w:orient")]
+    return sp
+
+
+def _diagramas_horizontales(doc) -> None:
+    """Pone cada diagrama ancho (y su pie) en una sección horizontal propia, a todo el ancho útil."""
+    base = doc.element.body.sectPr
+    parrafos = doc.paragraphs
+    util_cm = 27.94 - 2 * 2.0  # ancho útil en horizontal con márgenes de 2 cm
+    for i, p in enumerate(parrafos):
+        docpr = p._p.find(".//" + qn("wp:docPr"))
+        if docpr is None or not docpr.get("descr", "").startswith(HORIZONTALES):
+            continue
+        j = i - 1
+        while j > 0 and parrafos[j].style.name.startswith("Heading"):
+            j -= 1  # el título de la sección viaja con su diagrama a la página horizontal
+        anterior, pie = parrafos[j], parrafos[i + 1]
+        anterior._p.get_or_add_pPr().append(_sect_pr(base, horizontal=False))
+        sp = _sect_pr(base, horizontal=True)
+        mar = sp.find(qn("w:pgMar"))
+        for lado in ("left", "right", "top", "bottom"):
+            mar.set(qn(f"w:{lado}"), str(int(2.0 / 2.54 * 1440)))
+        pie._p.get_or_add_pPr().append(sp)
+        ancho = Cm(util_cm)
+        for etiqueta in ("wp:extent", "a:ext"):
+            for img in p._p.iter(qn(etiqueta)):
+                cx, cy = int(img.get("cx")), int(img.get("cy"))
+                escala = min(ancho / cx, Cm(15.5) / cy)
+                img.set("cx", str(int(cx * escala)))
+                img.set("cy", str(int(cy * escala)))
+
+
 def word(md: str) -> str:
     salida = os.path.join(DOCS, "Documento_Proyecto_Final_Computacion_Nube.docx")
     subprocess.run(
@@ -113,6 +160,8 @@ def word(md: str) -> str:
                 escala = min(ancho / cx, (doc.sections[0].page_height * 0.6) / cy)
                 img.set("cx", str(int(cx * escala)))
                 img.set("cy", str(int(cy * escala)))
+
+    _diagramas_horizontales(doc)
 
     for t in doc.tables:
         _bordes(t)

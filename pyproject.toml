@@ -14,3 +14,6 @@ ignore = ["B008"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"docs/**" = ["E501"]  # estilos CSS y textos largos de los generadores de documentación

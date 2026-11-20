@@ -1,0 +1,24 @@
+{
+  "displayName": "Turnos Cosecha · ms-asistencia no responde",
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "La verificación de /salud falla",
+      "conditionThreshold": {
+        "filter": "resource.type = \"uptime_url\" AND metric.type = \"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.labels.check_id = \"__CHECK_ID__\"",
+        "aggregations": [
+          {"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_NEXT_OLDER", "crossSeriesReducer": "REDUCE_COUNT_FALSE", "groupByFields": ["resource.label.host"]}
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 1,
+        "duration": "300s",
+        "trigger": {"count": 1}
+      }
+    }
+  ],
+  "notificationChannels": ["__CANAL__"],
+  "documentation": {
+    "content": "La verificación de disponibilidad de https://<ms-asistencia>/salud falla desde varias regiones. Revisar Cloud Run > ms-asistencia.",
+    "mimeType": "text/markdown"
+  }
+}

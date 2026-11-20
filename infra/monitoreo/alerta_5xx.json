@@ -1,0 +1,29 @@
+{
+  "displayName": "Turnos Cosecha · errores 5xx en Cloud Run",
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "Al menos una respuesta 5xx en 5 minutos",
+      "conditionThreshold": {
+        "filter": "resource.type = \"cloud_run_revision\" AND metric.type = \"run.googleapis.com/request_count\" AND metric.labels.response_code_class = \"5xx\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "300s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "groupByFields": ["resource.label.service_name"]
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "0s",
+        "trigger": {"count": 1}
+      }
+    }
+  ],
+  "notificationChannels": ["__CANAL__"],
+  "documentation": {
+    "content": "Algún microservicio respondió con error 5xx. Revisar Cloud Logging del servicio indicado (Cloud Run > servicio > Registros).",
+    "mimeType": "text/markdown"
+  }
+}
